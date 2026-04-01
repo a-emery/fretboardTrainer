@@ -16,6 +16,7 @@ const dot1 = document.getElementById('dot1');
 
 let isAccentEnabled = true;
 
+let audioContext = null;
 let bpm = Number(bpmInput.value) || 90;
 let beat = 0;
 let beatInterval = null;
@@ -23,6 +24,17 @@ let showCombinationInterval = null;
 let currentString = null;
 let currentNote = null;
 let isRunning = false;
+let lastTapTime = 0;
+let tapIntervals = [];
+
+function initAudioContext() {
+  if (!audioContext) {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioContext.state === 'suspended') {
+    audioContext.resume();
+  }
+}
 
 function randomItem(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -67,19 +79,22 @@ function updateBeatMeter(beat) {
 }
 
 function playClick(isAccent = false) {
-  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  const oscillator = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
+  if (!audioContext) {
+    initAudioContext();
+  }
+
+  const oscillator = audioContext.createOscillator();
+  const gain = audioContext.createGain();
 
   oscillator.type = 'square';
   oscillator.frequency.value = isAccent ? 1200 : 1000;
   gain.gain.value = isAccent ? 0.25 : 0.15;
 
   oscillator.connect(gain);
-  gain.connect(audioCtx.destination);
+  gain.connect(audioContext.destination);
 
   oscillator.start();
-  oscillator.stop(audioCtx.currentTime + 0.05);
+  oscillator.stop(audioContext.currentTime + 0.05);
 }
 
 function runMetronome() {
@@ -109,6 +124,8 @@ function start() {
   if (isRunning) return;
   isRunning = true;
   toggleBtn.textContent = 'Stop';
+
+  initAudioContext();
 
   bpm = Number(bpmInput.value);
   bpmEl.textContent = bpm;
@@ -156,6 +173,7 @@ noteModeSelect.addEventListener('change', () => {
 });
 
 function tapTempo() {
+  initAudioContext();
   const now = Date.now();
 
   if (lastTapTime && now - lastTapTime > 3000) {
@@ -191,6 +209,7 @@ function tapTempo() {
 toggleBtn.addEventListener('click', toggleStartStop);
 tapBtn.addEventListener('click', tapTempo);
 dot1.addEventListener('click', () => {
+  initAudioContext();
   isAccentEnabled = !isAccentEnabled;
   dot1.classList.toggle('accent-on');
 });
