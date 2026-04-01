@@ -86,22 +86,30 @@ function updateBeatMeter(beat) {
 }
 
 function playClick(isAccent = false) {
-  if (!audioContext || audioContext.state !== 'running') {
-    return; // Don't play if not ready
+  if (!audioContext) return;
+
+  const playSound = () => {
+    if (audioContext.state === 'running') {
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+
+      oscillator.type = 'square';
+      oscillator.frequency.value = isAccent ? 1200 : 1000;
+      gain.gain.value = isAccent ? 0.25 : 0.15;
+
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.05);
+    }
+  };
+
+  if (audioContext.state === 'suspended') {
+    audioContext.resume().then(playSound);
+  } else {
+    playSound();
   }
-
-  const oscillator = audioContext.createOscillator();
-  const gain = audioContext.createGain();
-
-  oscillator.type = 'square';
-  oscillator.frequency.value = isAccent ? 1200 : 1000;
-  gain.gain.value = isAccent ? 0.25 : 0.15;
-
-  oscillator.connect(gain);
-  gain.connect(audioContext.destination);
-
-  oscillator.start();
-  oscillator.stop(audioContext.currentTime + 0.05);
 }
 
 function runMetronome() {
