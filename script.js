@@ -34,7 +34,14 @@ async function initAudioContext() {
   if (audioContext.state === 'suspended') {
     await audioContext.resume();
   }
-}
+  // Unlock media channel on iOS
+  const unlockAudio = document.getElementById('unlockAudio');
+  if (unlockAudio) {
+    unlockAudio.play().then(() => {
+      unlockAudio.pause();
+      unlockAudio.currentTime = 0;
+    }).catch(() => {});
+  }}
 
 function randomItem(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
