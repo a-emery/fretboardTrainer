@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Guitar Fretboard Trainer</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 24px;
+            background: #121212;
+            color: white;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 24px;
+            font-size: 1.8rem;
+            margin-top: 0;
+        }        
+
+        .card {
+            background: #1f1f1f;
+            padding: 20px;
+            border-radius: 12px;
+            max-width: 480px;
+            margin: 0 auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+        }
+
+        select, input[type=range], button {
+            font: inherit;
+            border: none;
+            border-radius: 8px;
+            padding: 10px;
+            background: #2a2a2a;
+            color: white;
+            cursor: pointer;
+        }
+
+        select {
+            border: 1px solid #4d4d4d;
+            background: #262626;
+            color: white;
+            accent-color: #4adf8e;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+        }
+
+        select:focus,
+        input[type=range]:focus,
+        button:focus {
+            outline: 2px solid #4adf8e;
+            outline-offset: 2px;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .display-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 24px;
+            margin-bottom: 14px;
+        }
+
+        .display-row > div {
+            flex: 1 1 42%;
+            min-width: 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .badge {
+            font-size: 3.8rem;
+            margin: 12px 0;
+            display: inline-block;
+            min-width: 115px;
+            padding: 18px 24px;
+            border-radius: 16px;
+            text-align: center;
+            background: linear-gradient(150deg, #272727 0%, #1a1a1a 100%);
+            border: 2px solid #4adf8e;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.55);
+            letter-spacing: 0.08em;
+            color: #fdfdfd;
+            font-weight: 800;
+        }
+
+        .beat-dots {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            justify-content: center;
+        }
+
+        .divider {
+            width: 100%;
+            height: 1px;
+            margin: 18px 0;
+            background: linear-gradient(to right, rgba(74,223,142,0), rgba(74,223,142,0.7), rgba(74,223,142,0));
+        }
+
+        .dot {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #404040;
+            border: 1px solid #6f6f6f;            
+            cursor: pointer;
+            position: relative;
+        }
+
+        .dot.active {
+            background: #4adf8e;
+            box-shadow: 0 0 8px rgba(74,223,142,0.65);
+        }
+
+        .dot.accent-on::after {
+            content: '>';
+            position: absolute;
+            top: 43%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 20px;
+            color: #fff;
+            pointer-events: none;
+        }
+
+        button, input[type=range] {
+            font: inherit;
+            border: none;
+            border-radius: 8px;
+            padding: 10px;
+            background: #2682f2;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        input[type=range] {
+            background: #444;
+            outline: none;
+            accent-color: #4adf8e;
+        }
+
+        .meta {
+            font-size: 0.9rem;
+            color: #c9c9c9;
+        }
+
+        .cycleInfo {
+            text-align: center;
+            margin-top: 12px;
+        }
+
+        .control-bpm {
+            label, input {
+                display: block;
+            }
+        }
+
+        select {
+            margin-bottom: 12px;
+        }
+
+        @media (max-width: 550px) {
+            body {
+                margin: 12px;
+            }
+
+            .card {
+                padding: 14px;
+                max-width: 100%;
+            }
+
+            h1 {
+                font-size: 1.4rem;
+            }
+
+            .controls {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .badge {
+                font-size: 3rem;
+                min-width: 92px;
+                padding: 14px 16px;
+            }
+
+            .controls label,
+            .meta {
+                font-size: 0.85rem;
+            }
+
+            .beat-dots {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Guitar Fretboard Trainer</h1>
+
+        <div class="display-row">
+            <div>
+                <div>String</div>
+                <div class="badge" id="string">—</div>
+            </div>
+            <div>
+                <div>Note</div>
+                <div class="badge" id="note">—</div>
+            </div>
+        </div>
+
+        <div class="beat-dots">
+            <div id="dot1" class="dot"></div>
+            <div id="dot2" class="dot"></div>
+            <div id="dot3" class="dot"></div>
+            <div id="dot4" class="dot"></div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:10px; justify-content:flex-end; margin-top: 24px;">
+            <button id="toggleBtn">Start</button>
+            <button id="tapBtn">Tap Tempo</button>
+        </div>
+
+        <p id="cycleInfo" class="meta cycleInfo">Press Start to begin</p>
+
+        <div class="divider"></div>
+
+        <div class="controls" style="margin-top:14px;">
+            <div class="control-block control-bpm">
+                <label for="bpmInput">BPM</label>
+                <input id="bpmInput" type="range" min="40" max="240" value="90" />
+                <div class="meta">Current bpm: <span id="bpm">90</span></div>
+            </div>
+            <div class="control-block control-note">
+                <label for="noteModeSelect">Note mode</label>
+                <select id="noteModeSelect" style="width:100%; margin-top:6px;">
+                    <option value="natural">Natural notes only</option>
+                    <option value="natural+sharps">Natural + sharps</option>
+                    <option value="natural+flats">Natural + flats</option>
+                    <option value="all">Natural + sharps + flats</option>
+                </select>
+                <div class="meta">Change which notes are used for random display.</div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
