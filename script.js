@@ -19,13 +19,26 @@ let isAccentEnabled = true;
 let audioContext = null;
 let bpm = Number(bpmInput.value) || 90;
 let beat = 0;
-let beatInterval = null;
+let currentTimeout = null;
 let showCombinationInterval = null;
 let currentString = null;
 let currentNote = null;
 let isRunning = false;
 let lastTapTime = 0;
 let tapIntervals = [];
+
+function setupFirstGestureUnlock() {
+  const unlock = async () => {
+    await initAudioContext();
+    document.body.removeEventListener('touchstart', unlock);
+    document.body.removeEventListener('click', unlock);
+  };
+
+  document.body.addEventListener('touchstart', unlock, { once: true });
+  document.body.addEventListener('click', unlock, { once: true });
+}
+
+setupFirstGestureUnlock();
 
 async function initAudioContext() {
   if (!audioContext) {
@@ -115,12 +128,13 @@ function playClick(isAccent = false) {
 function runMetronome() {
   const beatDurationMs = (60 / bpm) * 1000;
 
-  if (beatInterval) {
-    clearInterval(beatInterval);
-    beatInterval = null;
+  if (currentTimeout) {
+    clearTimeout(currentTimeout);
+    currentTimeout = null;
   }
 
-  beatInterval = setInterval(() => {
+  const tick = () => {
+    if (!isRunning) return;
 
     if (beat >= 4) {
       pickNewCombination();
@@ -132,7 +146,10 @@ function runMetronome() {
 
     playClick(isAccentEnabled && beat === 1);
 
-  }, beatDurationMs);
+    currentTimeout = setTimeout(tick, beatDurationMs);
+  };
+
+  currentTimeout = setTimeout(tick, beatDurationMs);
 }
 
 async function start() {
@@ -144,8 +161,9 @@ async function start() {
 
   bpm = Number(bpmInput.value);
   bpmEl.textContent = bpm;
+  beat = 1;
   pickNewCombination();
-  playClick(isAccentEnabled);
+  playClick(isAccentEnabled && beat === 1);
 
   runMetronome();
 }
@@ -154,9 +172,9 @@ function stop() {
   isRunning = false;
   toggleBtn.textContent = 'Start';
 
-  if (beatInterval) {
-    clearInterval(beatInterval);
-    beatInterval = null;
+  if (currentTimeout) {
+    clearTimeout(currentTimeout);
+    currentTimeout = null;
   }
   cycleInfo.textContent = 'Stopped';
   updateBeatMeter(0);
