@@ -41,9 +41,7 @@ function setupFirstGestureUnlock() {
 setupFirstGestureUnlock();
 
 async function initAudioContext() {
-  if (audioContext.state === 'suspended') {
-    await audioContext.resume();
-  }
+  await resumeAudioContext();
   // Unlock media channel on iOS
   const unlockAudio = document.getElementById('unlockAudio');
   if (unlockAudio) {
@@ -51,6 +49,12 @@ async function initAudioContext() {
       unlockAudio.pause();
       unlockAudio.currentTime = 0;
     }).catch(() => {});
+  }
+}
+
+async function resumeAudioContext() {
+  if (audioContext.state === 'suspended') {
+    await audioContext.resume();
   }
 }
 
@@ -150,6 +154,9 @@ function runMetronome() {
 
 async function start() {
   if (isRunning) return;
+
+  await resumeAudioContext();
+
   isRunning = true;
   toggleBtn.textContent = 'Stop';
 
