@@ -41,7 +41,6 @@ function setupFirstGestureUnlock() {
 setupFirstGestureUnlock();
 
 async function initAudioContext() {
-  await resumeAudioContext();
   // Unlock media channel on iOS
   const unlockAudio = document.getElementById('unlockAudio');
   if (unlockAudio) {
@@ -50,6 +49,8 @@ async function initAudioContext() {
       unlockAudio.currentTime = 0;
     }).catch(() => {});
   }
+
+  await resumeAudioContext();
 }
 
 async function resumeAudioContext() {
