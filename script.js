@@ -50,7 +50,7 @@ async function initAudioContext() {
   // Unlock media channel on iOS
   const unlockAudio = document.getElementById('unlockAudio');
   if (unlockAudio) {
-    unlockAudio.play().then(() => {
+    await unlockAudio.play().then(() => {
       unlockAudio.pause();
       unlockAudio.currentTime = 0;
     }).catch(() => {});
@@ -98,8 +98,10 @@ function updateBeatMeter(beat) {
   }
 }
 
-function playClick(isAccent = false) {
-  if (!audioContext) return;
+async function playClick(isAccent = false) {
+  if (!audioContext) {
+    await initAudioContext
+  };
 
   const playSound = () => {
     if (audioContext.state === 'running') {
