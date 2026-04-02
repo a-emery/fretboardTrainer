@@ -47,7 +47,7 @@ async function initAudioContext() {
   // Unlock media channel on iOS
   const unlockAudio = document.getElementById('unlockAudio');
   if (unlockAudio) {
-    await unlockAudio.play().then(() => {
+    unlockAudio.play().then(() => {
       unlockAudio.pause();
       unlockAudio.currentTime = 0;
     }).catch(() => {});
