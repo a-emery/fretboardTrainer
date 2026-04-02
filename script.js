@@ -18,6 +18,7 @@ let isAccentEnabled = true;
 
 let audioContext = new (window.AudioContext || window.webkitAudioContext)();
 let persistentSource = null; // Keep a persistent audio source to maintain iOS audio unlock
+let audioUnlocked = false; // Track if audio has been unlocked
 let bpm = Number(bpmInput.value) || 90;
 let beat = 0;
 let currentTimeout = null;
@@ -28,40 +29,47 @@ let isRunning = false;
 let lastTapTime = 0;
 let tapIntervals = [];
 
-function setupFirstGestureUnlock() {
-  const unlock = async () => {
-    await initAudioContext();
-    document.body.removeEventListener('touchstart', unlock);
-    document.body.removeEventListener('click', unlock);
+function setupAudioUnlock() {
+  const unlockAudio = async () => {
+    if (!audioUnlocked) {
+      await initAudioContext();
+      audioUnlocked = true;
+    }
   };
 
-  document.body.addEventListener('touchstart', unlock, { once: true });
-  document.body.addEventListener('click', unlock, { once: true });
+  // Unlock audio on any user interaction
+  document.body.addEventListener('touchstart', unlockAudio, { passive: true });
+  document.body.addEventListener('click', unlockAudio, { passive: true });
+  document.body.addEventListener('keydown', unlockAudio, { passive: true });
 }
 
-setupFirstGestureUnlock();
+setupAudioUnlock();
 
 async function initAudioContext() {
+  // First resume the audio context
+  await resumeAudioContext();
+  
   // Unlock media channel on iOS
   const unlockAudio = document.getElementById('unlockAudio');
   if (unlockAudio) {
-    unlockAudio.play().then(() => {
+    try {
+      await unlockAudio.play();
       unlockAudio.pause();
       unlockAudio.currentTime = 0;
-    }).catch(() => {});
+    } catch (e) {
+      // Ignore errors from unlock audio
+    }
   }
 
-  await resumeAudioContext();
-  
   // Create a persistent silent audio source to keep iOS audio unlocked
-  if (!persistentSource && audioContext.state === 'running') {
+  if (!persistentSource) {
     try {
       persistentSource = audioContext.createBufferSource();
       const buffer = audioContext.createBuffer(1, 1, 22050);
       persistentSource.buffer = buffer;
       persistentSource.loop = true;
       const gainNode = audioContext.createGain();
-      gainNode.gain.value = 0; // Silent
+      gainNode.gain.value = 0.001; // Very quiet but not completely silent
       persistentSource.connect(gainNode);
       gainNode.connect(audioContext.destination);
       persistentSource.start();
@@ -120,6 +128,12 @@ function updateBeatMeter(beat) {
 }
 
 async function playClick(isAccent = false) {
+  // Ensure audio is unlocked before playing
+  if (!audioUnlocked) {
+    await initAudioContext();
+    audioUnlocked = true;
+  }
+
   const playSound = () => {
     try {
       if (audioContext.state === 'running') {
@@ -181,7 +195,11 @@ function runMetronome() {
 async function start() {
   if (isRunning) return;
 
-  await resumeAudioContext();
+  // Ensure audio is unlocked before starting
+  if (!audioUnlocked) {
+    await initAudioContext();
+    audioUnlocked = true;
+  }
 
   isRunning = true;
   toggleBtn.textContent = 'Stop';
