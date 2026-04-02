@@ -16,7 +16,7 @@ const dot1 = document.getElementById('dot1');
 
 let isAccentEnabled = true;
 
-let audioContext = null;
+let audioContext = new (window.AudioContext || window.webkitAudioContext)();
 let bpm = Number(bpmInput.value) || 90;
 let beat = 0;
 let currentTimeout = null;
@@ -41,9 +41,6 @@ function setupFirstGestureUnlock() {
 setupFirstGestureUnlock();
 
 async function initAudioContext() {
-  if (!audioContext) {
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-  }
   if (audioContext.state === 'suspended') {
     await audioContext.resume();
   }
@@ -54,7 +51,8 @@ async function initAudioContext() {
       unlockAudio.pause();
       unlockAudio.currentTime = 0;
     }).catch(() => {});
-  }}
+  }
+}
 
 function randomItem(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -99,10 +97,6 @@ function updateBeatMeter(beat) {
 }
 
 async function playClick(isAccent = false) {
-  if (!audioContext) {
-    await initAudioContext
-  };
-
   const playSound = () => {
     if (audioContext.state === 'running') {
       const oscillator = audioContext.createOscillator();
@@ -159,8 +153,6 @@ async function start() {
   isRunning = true;
   toggleBtn.textContent = 'Stop';
 
-  await initAudioContext();
-
   bpm = Number(bpmInput.value);
   bpmEl.textContent = bpm;
   beat = 1;
@@ -208,7 +200,6 @@ noteModeSelect.addEventListener('change', () => {
 });
 
 async function tapTempo() {
-  await initAudioContext();
   const now = Date.now();
 
   if (lastTapTime && now - lastTapTime > 3000) {
@@ -244,7 +235,6 @@ async function tapTempo() {
 toggleBtn.addEventListener('click', toggleStartStop);
 tapBtn.addEventListener('click', tapTempo);
 dot1.addEventListener('click', async () => {
-  await initAudioContext();
   isAccentEnabled = !isAccentEnabled;
   dot1.classList.toggle('accent-on');
 });
