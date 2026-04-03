@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="guitar.svg" />
-    <title>Fretboard Trainer 5</title>
+    <title>Fretboard Trainer</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -213,7 +213,7 @@
 </head>
 <body>
     <div class="card">
-        <h1>Guitar Fretboard Trainer</h1>
+        <h1>Fretboard Trainer</h1>
 
         <div class="display-row">
             <div>
@@ -264,6 +264,10 @@
 
     <audio id="unlockAudio" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA" preload="auto"></audio>
 
-    <script src="script.js"></script>
+    <script>
+        const script = document.createElement('script');
+        script.src = `script.js?v=${new Date().getTime()}`;
+        document.body.appendChild(script);
+    </script>
 </body>
 </html>
