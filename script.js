@@ -28,17 +28,6 @@ async function initAudioContext() {
   if (audioContext.state === 'suspended') {
     await audioContext.resume();
   }
-  // Additionally, playing and pausing a silent audio element can help on some iOS versions.
-  const unlockAudio = document.getElementById('unlockAudio');
-  if (unlockAudio) {
-    try {
-      await unlockAudio.play();
-      unlockAudio.pause();
-      unlockAudio.currentTime = 0;
-    } catch (e) {
-      console.warn("Silent audio element playback failed, but context might still be unlocked.", e);
-    }
-  }
 }
 
 function randomItem(arr) {
