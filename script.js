@@ -27,7 +27,15 @@ let lastTapTime = 0;
 let tapIntervals = [];
 
 // Create a synth for the metronome sound
-const synth = new Tone.MembraneSynth().toDestination();
+const synth = new Tone.MonoSynth({
+  oscillator: {
+    type: "square"
+  },
+  envelope: {
+    attack: 0.00001
+  }
+}).toDestination();
+// const synth = new Tone.AMSynth().toDestination();
 
 function randomItem(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -57,10 +65,12 @@ function updateBeatMeter(currentBeat) {
 }
 
 function playClick() {
+    if (!isRunning) return; // Prevent sound if metronome has been stopped
     const isAccent = (beat === accentedBeat);
-    const note = isAccent ? 'C4' : 'C3';
-    const velocity = isAccent ? 0.5 : 0.3;
-    synth.triggerAttack(note, Tone.now(), velocity);
+    const note = isAccent ? 'G5' : 'C5';
+    const velocity = isAccent ? 2 : 0.8;
+  synth.triggerAttack(note, Tone.now(), velocity);
+  synth.triggerRelease(Tone.now() + .05);
 }
 
 function tick() {
@@ -124,6 +134,21 @@ function toggleStartStop() {
   if (!audioUnlocked) {
     toggleBtn.disabled = true;
     toggleBtn.textContent = 'Starting...';
+
+    // Workaround for iOS silent mode. Playing and pausing a dummy audio element
+    // categorizes the audio session as 'media', which bypasses the silent switch.
+    const unlockAudioEl = document.getElementById('unlockAudio');
+    if (unlockAudioEl) {
+        const promise = unlockAudioEl.play();
+        if (promise !== undefined) {
+            promise.then(() => {
+                unlockAudioEl.pause();
+                unlockAudioEl.currentTime = 0;
+            }).catch((error) => {
+                console.warn("Dummy audio playback failed. This is OK on most platforms.", error);
+            });
+        }
+    }
     
     Tone.start().then(() => {
       audioUnlocked = true;
