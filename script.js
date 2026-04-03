@@ -29,22 +29,6 @@ let isRunning = false;
 let lastTapTime = 0;
 let tapIntervals = [];
 
-function setupAudioUnlock() {
-  const unlockAudio = async () => {
-    if (!audioUnlocked) {
-      await initAudioContext();
-      audioUnlocked = true;
-    }
-  };
-
-  // Unlock audio on any user interaction
-  document.body.addEventListener('touchstart', unlockAudio, { passive: true });
-  document.body.addEventListener('click', unlockAudio, { passive: true });
-  document.body.addEventListener('keydown', unlockAudio, { passive: true });
-}
-
-setupAudioUnlock();
-
 async function initAudioContext() {
   // First resume the audio context
   await resumeAudioContext();
@@ -128,7 +112,7 @@ function updateBeatMeter(beat) {
 }
 
 async function playClick(isAccent = false) {
-  // Ensure audio is unlocked before playing
+  // Defensive check to ensure audio is unlocked before playing
   if (!audioUnlocked) {
     await initAudioContext();
     audioUnlocked = true;
@@ -195,12 +179,6 @@ function runMetronome() {
 async function start() {
   if (isRunning) return;
 
-  // Ensure audio is unlocked before starting
-  if (!audioUnlocked) {
-    await initAudioContext();
-    audioUnlocked = true;
-  }
-
   isRunning = true;
   toggleBtn.textContent = 'Stop';
 
@@ -225,10 +203,16 @@ function stop() {
   updateBeatMeter(0);
 }
 
-function toggleStartStop() {
+async function toggleStartStop() {
   if (isRunning) {
     stop();
   } else {
+    // On the first start, initialize and unlock the audio context.
+    // This must be done in a direct response to a user gesture on iOS.
+    if (!audioUnlocked) {
+      await initAudioContext();
+      audioUnlocked = true;
+    }
     start();
   }
 }
