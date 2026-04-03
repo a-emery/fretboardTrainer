@@ -23,7 +23,6 @@ let isRunning = false;
 let lastTapTime = 0;
 let tapIntervals = [];
 
-// A simplified function to resume the audio context, which is the most critical part.
 async function initAudioContext() {
   if (audioContext.state === 'suspended') {
     await audioContext.resume();
@@ -62,10 +61,7 @@ function updateBeatMeter(beat) {
 }
 
 async function playClick(isAccent = false) {
-  if (audioContext.state !== 'running') {
-    console.warn('Audio context not running, cannot play click.');
-    return;
-  }
+  if (audioContext.state !== 'running') return;
   try {
     const oscillator = audioContext.createOscillator();
     const gain = audioContext.createGain();
@@ -81,23 +77,20 @@ async function playClick(isAccent = false) {
   }
 }
 
-function runMetronome() {
-  const beatDurationMs = (60 / bpm) * 1000;
-  if (currentTimeout) {
-    clearTimeout(currentTimeout);
+function tick() {
+  if (!isRunning) return;
+
+  if (beat >= 4) {
+    pickNewCombination();
+  } else {
+    beat += 1;
+    cycleInfo.textContent = `Showing for 4 beats (beat ${beat}/4)`;
+    updateBeatMeter(beat);
   }
-  const tick = () => {
-    if (!isRunning) return;
-    if (beat >= 4) {
-      pickNewCombination();
-    } else {
-      beat += 1;
-      cycleInfo.textContent = `Showing for 4 beats (beat ${beat}/4)`;
-      updateBeatMeter(beat);
-    }
-    playClick(isAccentEnabled && beat === 1);
-    currentTimeout = setTimeout(tick, beatDurationMs);
-  };
+
+  playClick(isAccentEnabled && beat === 1);
+
+  const beatDurationMs = (60 / bpm) * 1000;
   currentTimeout = setTimeout(tick, beatDurationMs);
 }
 
@@ -105,11 +98,17 @@ function start() {
   if (isRunning) return;
   isRunning = true;
   toggleBtn.textContent = 'Stop';
-  toggleBtn.disabled = false; // Ensure button is enabled
+  toggleBtn.disabled = false;
   bpm = Number(bpmInput.value);
   bpmEl.textContent = bpm;
-  beat = 0; // Start with a fresh beat cycle
-  runMetronome();
+
+  // Immediately pick a combination, display it, and play the first beat.
+  pickNewCombination();
+  playClick(isAccentEnabled && beat === 1);
+
+  // Schedule the next beat.
+  const beatDurationMs = (60 / bpm) * 1000;
+  currentTimeout = setTimeout(tick, beatDurationMs);
 }
 
 function stop() {
@@ -119,6 +118,7 @@ function stop() {
     clearTimeout(currentTimeout);
     currentTimeout = null;
   }
+  beat = 0;
   cycleInfo.textContent = 'Stopped';
   updateBeatMeter(0);
 }
@@ -153,13 +153,16 @@ bpmInput.addEventListener('input', () => {
   lastTapTime = 0;
   tapIntervals = [];
   if (isRunning) {
-    runMetronome();
+    clearTimeout(currentTimeout);
+    tick();
   }
 });
 
 noteModeSelect.addEventListener('change', () => {
   if (isRunning) {
-    pickNewCombination();
+    // Reset the beat cycle to show the new note immediately
+    clearTimeout(currentTimeout);
+    start();
   }
 });
 
@@ -177,7 +180,10 @@ function tapTempo() {
     bpmInput.value = bpm;
     bpmEl.textContent = bpm;
     cycleInfo.textContent = `Tap tempo: ${bpm} BPM`;
-    if (isRunning) runMetronome();
+    if (isRunning) {
+      clearTimeout(currentTimeout);
+      tick();
+    }
   } else {
     cycleInfo.textContent = 'Tap tempo: Tap again...';
   }
