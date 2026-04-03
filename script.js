@@ -11,23 +11,23 @@ const noteModeSelect = document.getElementById('noteModeSelect');
 const cycleInfo = document.getElementById('cycleInfo');
 const toggleBtn = document.getElementById('toggleBtn');
 const tapBtn = document.getElementById('tapBtn');
-const dot1 = document.getElementById('dot1');
+const beatDots = [
+  document.getElementById('dot1'),
+  document.getElementById('dot2'),
+  document.getElementById('dot3'),
+  document.getElementById('dot4'),
+];
 
-let isAccentEnabled = true;
-let audioContext = new (window.AudioContext || window.webkitAudioContext)();
+let accentedBeat = 1; // Default to accenting the first beat
 let audioUnlocked = false;
 let bpm = Number(bpmInput.value) || 90;
 let beat = 0;
-let currentTimeout = null;
 let isRunning = false;
 let lastTapTime = 0;
 let tapIntervals = [];
 
-async function initAudioContext() {
-  if (audioContext.state === 'suspended') {
-    await audioContext.resume();
-  }
-}
+// Create a synth for the metronome sound
+const synth = new Tone.MembraneSynth().toDestination();
 
 function randomItem(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -46,52 +46,39 @@ function pickNewCombination() {
   const currentNote = randomItem(getNotes());
   stringEl.textContent = currentString;
   noteEl.textContent = currentNote;
-  cycleInfo.textContent = `Showing for 4 beats (beat 1/4)`;
-  beat = 1;
-  updateBeatMeter(beat);
 }
 
-function updateBeatMeter(beat) {
-  for (let i = 1; i <= 4; i += 1) {
-    const dot = document.getElementById(`dot${i}`);
-    if (dot) {
-      dot.classList.toggle('active', i === beat);
-    }
-  }
+function updateBeatMeter(currentBeat) {
+  beatDots.forEach((dot, index) => {
+    const beatNumber = index + 1;
+    dot.classList.toggle('active', beatNumber === currentBeat);
+    dot.classList.toggle('accent-on', beatNumber === accentedBeat);
+  });
 }
 
-async function playClick(isAccent = false) {
-  if (audioContext.state !== 'running') return;
-  try {
-    const oscillator = audioContext.createOscillator();
-    const gain = audioContext.createGain();
-    oscillator.type = 'square';
-    oscillator.frequency.value = isAccent ? 1200 : 1000;
-    gain.gain.value = isAccent ? 0.25 : 0.15;
-    oscillator.connect(gain);
-    gain.connect(audioContext.destination);
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.05);
-  } catch (e) {
-    console.error('Error playing click sound:', e);
-  }
+function playClick() {
+    const isAccent = (beat === accentedBeat);
+    const note = isAccent ? 'C4' : 'C3';
+    const velocity = isAccent ? 0.5 : 0.3;
+    synth.triggerAttack(note, Tone.now(), velocity);
 }
 
 function tick() {
-  if (!isRunning) return;
+    if (!isRunning) return;
 
-  if (beat >= 4) {
-    pickNewCombination();
-  } else {
-    beat += 1;
+    // Advance the beat, looping from 1 to 4
+    beat = (beat % 4) + 1;
+
+    if (beat === 1) {
+        pickNewCombination();
+    }
+
+    // Update UI for all beats
     cycleInfo.textContent = `Showing for 4 beats (beat ${beat}/4)`;
     updateBeatMeter(beat);
-  }
-
-  playClick(isAccentEnabled && beat === 1);
-
-  const beatDurationMs = (60 / bpm) * 1000;
-  currentTimeout = setTimeout(tick, beatDurationMs);
+    
+    // Play the click
+    playClick();
 }
 
 function start() {
@@ -101,26 +88,31 @@ function start() {
   toggleBtn.disabled = false;
   bpm = Number(bpmInput.value);
   bpmEl.textContent = bpm;
+  
+  Tone.Transport.bpm.value = bpm;
 
-  // Immediately pick a combination, display it, and play the first beat.
-  pickNewCombination();
-  playClick(isAccentEnabled && beat === 1);
+  // Reset beat so the first tick starts at 1
+  beat = 0; 
 
-  // Schedule the next beat.
-  const beatDurationMs = (60 / bpm) * 1000;
-  currentTimeout = setTimeout(tick, beatDurationMs);
+  // Schedule the tick function to be called on every beat.
+  Tone.Transport.scheduleRepeat(time => {
+    Tone.Draw.schedule(() => {
+        tick();
+    }, time);
+  }, "4n");
+
+  // Start the transport. The first tick will fire immediately.
+  Tone.Transport.start();
 }
 
 function stop() {
   isRunning = false;
   toggleBtn.textContent = 'Start';
-  if (currentTimeout) {
-    clearTimeout(currentTimeout);
-    currentTimeout = null;
-  }
   beat = 0;
   cycleInfo.textContent = 'Stopped';
   updateBeatMeter(0);
+  Tone.Transport.stop();
+  Tone.Transport.cancel(); // Remove all scheduled events
 }
 
 function toggleStartStop() {
@@ -133,7 +125,7 @@ function toggleStartStop() {
     toggleBtn.disabled = true;
     toggleBtn.textContent = 'Starting...';
     
-    initAudioContext().then(() => {
+    Tone.start().then(() => {
       audioUnlocked = true;
       start();
     }).catch(err => {
@@ -153,16 +145,15 @@ bpmInput.addEventListener('input', () => {
   lastTapTime = 0;
   tapIntervals = [];
   if (isRunning) {
-    clearTimeout(currentTimeout);
-    tick();
+    Tone.Transport.bpm.value = bpm;
   }
 });
 
 noteModeSelect.addEventListener('change', () => {
   if (isRunning) {
-    // Reset the beat cycle to show the new note immediately
-    clearTimeout(currentTimeout);
-    start();
+    // Immediately show a new combination by resetting the beat cycle
+    beat = 0;
+    tick();
   }
 });
 
@@ -181,8 +172,7 @@ function tapTempo() {
     bpmEl.textContent = bpm;
     cycleInfo.textContent = `Tap tempo: ${bpm} BPM`;
     if (isRunning) {
-      clearTimeout(currentTimeout);
-      tick();
+      Tone.Transport.bpm.value = bpm;
     }
   } else {
     cycleInfo.textContent = 'Tap tempo: Tap again...';
@@ -192,11 +182,13 @@ function tapTempo() {
 
 toggleBtn.addEventListener('click', toggleStartStop);
 tapBtn.addEventListener('click', tapTempo);
-dot1.addEventListener('click', () => {
-  isAccentEnabled = !isAccentEnabled;
-  dot1.classList.toggle('accent-on');
+
+beatDots.forEach((dot, index) => {
+  dot.addEventListener('click', () => {
+    accentedBeat = index + 1;
+    updateBeatMeter(beat); // Update display to show new accented beat
+  });
 });
 
 cycleInfo.textContent = 'Press Start to begin';
-updateBeatMeter(0);
-dot1.classList.add('accent-on');
+updateBeatMeter(0); // Initialize beat meter display
